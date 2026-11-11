@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "module": "ES2020",
+    "noEmitOnError": true,
+    "noImplicitAny": false,
+    "outDir": "./wwwroot",
+    "removeComments": false,
+    "rootDir": "./Scripts",
+    "sourceMap": true,
+    "strict": true,
+    "target": "ES2020",
+    "esModuleInterop": true
+  },
+
+  "include": [
+    "./Scripts/**/*.ts"
+  ],
+
+  "exclude": [
+    "node_modules",
+    "wwwroot/scripts/js"
+  ]
+}

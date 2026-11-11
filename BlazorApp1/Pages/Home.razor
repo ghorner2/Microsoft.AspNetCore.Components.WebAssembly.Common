@@ -1,0 +1,162 @@
+﻿@page "/"
+@using System.Text.Json
+@inject IJSRuntime JS
+@implements IAsyncDisposable
+
+<PageTitle>Home</PageTitle>
+
+<h1>Browser event binding test host</h1>
+<br/>
+<p data-testid="status">@status</p>
+<br/>
+<button id="event-button" @ref="buttonTarget" 
+    @onclick="() => nativeClicks++">Click target
+</button>
+<output data-testid="native-clicks">@nativeClicks</output>
+<br/>
+<label>Text <input id="event-input" @ref="inputTarget" /></label>
+<br/>
+<label>Enabled <input id="event-checkbox" type="checkbox" /></label>
+<br/>
+<label>
+    Selection
+    <select id="event-select">
+        <option value="first">First</option>
+        <option value="second">Second</option>
+    </select>
+</label>
+<form id="event-form">
+    <button type="submit">Submit target</button>
+</form>
+<br/><br/>
+<button @onclick="UnbindAsync">Unbind events</button>
+<br/>
+<table>
+    <thead><tr><th>Binding</th><th>Count</th><th>Last C# event</th></tr></thead>
+    <tbody>
+        @foreach (var entry in received)
+        {
+            <tr>
+                <td>@entry.Key</td>
+                <td data-testid="@(entry.Key + "-count")">@entry.Value.Count</td>
+                <td data-testid="@(entry.Key + "-event")">@JsonSerializer.Serialize(entry.Value.Last)</td>
+            </tr>
+        }
+    </tbody>
+</table>
+@code {
+    
+    private IJSObjectReference? module;
+    private IJSObjectReference? routerModule;
+    private IJSObjectReference? buttonPatch;
+    private IJSObjectReference? inputPatch;
+    
+    private ElementReference buttonTarget;
+    private ElementReference inputTarget;
+    
+    private DotNetObjectReference<Home>? receiver;
+
+    private readonly Dictionary<string, string> targets = new();
+    private readonly Dictionary<string, ReceivedEvent> received = new();
+    
+    private string status = "Loading";
+    
+    private int nativeClicks;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        receiver = DotNetObjectReference.Create(this);
+
+        buttonPatch = await JS.InvokeAsync<IJSObjectReference>("patchEventTarget", buttonTarget, receiver);
+        
+        routerModule = await JS.InvokeAsync<IJSObjectReference>("import", "./scripts/js/EventRouter.js");
+        inputPatch = await routerModule.InvokeAsync<IJSObjectReference>("patchEventTarget", inputTarget, receiver);
+       
+        module = await JS.InvokeAsync<IJSObjectReference>("import", "./event-test-host.js");
+        var bindings = await module.InvokeAsync<Binding[]>("bind", receiver, buttonPatch, inputPatch);
+        foreach (var binding in bindings)
+        {
+            targets.Add(binding.Identity, binding.Name);
+            foreach (var type in binding.Events)
+            {
+                received.Add($"{binding.Name}-{type}", new ReceivedEvent());
+            }
+        }
+        status = "Ready";
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public Task OnEvent(string identity, BrowserEvent browserEvent)
+    {
+        var entry = received[$"{targets[identity]}-{browserEvent.Type}"];
+        
+        entry.Count++;
+        entry.Last = browserEvent;
+        
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task UnbindAsync()
+    {
+        if (module is not null)
+        {
+            await module.InvokeVoidAsync("unbind");
+        }
+        status = "Unbound";
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (module is not null)
+        {
+            await module.InvokeVoidAsync("unbind");
+            await module.DisposeAsync();
+        }
+
+        if (buttonPatch is not null)
+        {
+            await buttonPatch.DisposeAsync();
+        }
+        
+        if (inputPatch is not null)
+        {
+            await inputPatch.DisposeAsync();
+        }
+        
+        if (routerModule is not null)
+        {
+            await routerModule.DisposeAsync();
+        }
+        
+        receiver?.Dispose();
+    }
+
+    public sealed record Binding(string Name, string Identity, string[] Events);
+    public sealed class ReceivedEvent
+    {
+        public int Count { get; set; }
+        public BrowserEvent? Last { get; set; }
+    }
+
+    public sealed class BrowserEvent
+    {
+        public string Type { get; set; } = "";
+        public bool Bubbles { get; set; }
+        public bool Cancelable { get; set; }
+        public bool DefaultPrevented { get; set; }
+        public string? Value { get; set; }
+        public bool? Checked { get; set; }
+        public string? Key { get; set; }
+        public string? Code { get; set; }
+        public int? Button { get; set; }
+        public double? ClientX { get; set; }
+        public double? ClientY { get; set; }
+        public JsonElement Detail { get; set; }
+    }
+}

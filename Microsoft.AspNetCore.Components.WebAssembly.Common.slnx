@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Microsoft.AspNetCore.Components.WebAssembly.Common/Microsoft.AspNetCore.Components.WebAssembly.Common.csproj" />
+  <Project Path="SampleBlazor/SampleBlazor.csproj" />
+</Solution>

@@ -1,0 +1,26 @@
+{
+  "name": "microsoft.aspnetcore.components.webassembly.common",
+  "version": "1.0.0",
+  "description": "This project is a runnable .NET 10 Blazor WebAssembly test host. Playwright drives a real Chromium browser and asserts the events received by the C# `[JSInvokable] OnEvent` method, not a mocked .NET receiver.",
+  "keywords": [],
+  "license": "ISC",
+  "author": "",
+  "type": "commonjs",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "build:scripts": "tsc --project Microsoft.AspNetCore.Components.WebAssembly.Common\\tsconfig.json",
+    "test": "npm run build:scripts && playwright test"
+  },
+  "dependencies": {
+    "@types/blazor__javascript-interop": "^3.1.7",
+    "event-target-bus": "^1.1.0",
+    "event-target-subscriber": "^1.0.1",
+    "typescript": "^7.0.2"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1"
+  }
+}
